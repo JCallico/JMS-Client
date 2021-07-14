@@ -1,6 +1,7 @@
 ﻿using CommandLine;
 using System;
 using System.Collections.Generic;
+using System.Configuration;
 using System.IO;
 using System.Reflection;
 using System.Threading;
@@ -10,11 +11,11 @@ namespace ObjectSharp.Demos.JMSClient
 {
     class Program
     {
-        private static  string host = "localhost";
-        private static  int port = 7001;
-
-        private static string cfName = "weblogic.jms.ConnectionFactory";
-        private static string topicName = "dizzyworldTopic";
+        private static string DefaultConnectionFactoryName = ConfigurationManager.AppSettings["DefaultConnectionFactoryName"];
+        private static string DefaultTopicName = ConfigurationManager.AppSettings["DefaultTopicName"];
+        private static string DefaultSubscriberName = ConfigurationManager.AppSettings["DefaultSubscriberName"];
+        private static string DefaultClientId = ConfigurationManager.AppSettings["DefaultClientId"];
+        private static string DefaultProviderUrl = ConfigurationManager.AppSettings["DefaultProviderUrl"];
 
         private static bool receivingThreadStop = false;
 
@@ -33,7 +34,7 @@ namespace ObjectSharp.Demos.JMSClient
                         {
                             case OptionsCommand.Send:
 
-                                SendMessageToTopic(context, topicName, options.Message);
+                                SendMessageToTopic(context, DefaultTopicName, options.Message);
 
                                 break;
 
@@ -41,12 +42,11 @@ namespace ObjectSharp.Demos.JMSClient
 
                                 var receivingThread = new Thread(() =>
                                 {
-                                    ConsumeMessageFromTopicWithAutoAcknowledge(context, topicName);
+                                    ConsumeMessageFromTopicWithClientAcknowledge(context, DefaultTopicName);
                                 });
 
                                 receivingThread.Start();
 
-                                Console.WriteLine("Waiting for messages, press any key to end... \n");
                                 Console.ReadKey();
 
                                 receivingThreadStop = true;
@@ -78,23 +78,16 @@ namespace ObjectSharp.Demos.JMSClient
 
         private static IContext CreateContext()
         {
-            IDictionary<string, object> paramMap = new Dictionary<string, object>();
-
-            paramMap[Constants.Context.PROVIDER_URL] = $"t3://{host}:{port}";
+            IDictionary<string, object> paramMap = new Dictionary<string, object>
+            {
+                { Constants.Context.PROVIDER_URL, DefaultProviderUrl }
+            };
 
             return ContextFactory.CreateContext(paramMap);
         }
 
         private static void SendMessageToTopic(IContext context, string TopicName, string messageText)
         {
-            // -------------
-            // Send Message:
-            // -------------
-            // Create a producer and send a non-persistent message.  Note
-            // that even if the message were sent as persistent, it would be
-            // automatically downgraded to non-persistent, as there are only
-            // non-durable consumers subscribing to the topic.
-
             IConnection connection = null;
             ISession producerSession = null;
             IMessageProducer producer = null;
@@ -103,17 +96,28 @@ namespace ObjectSharp.Demos.JMSClient
             {
                 ITopic topic = (ITopic)context.LookupDestination(TopicName);
 
-                IConnectionFactory cf = context.LookupConnectionFactory(cfName);
+                IConnectionFactory cf = context.LookupConnectionFactory(DefaultConnectionFactoryName);
 
                 connection = cf.CreateConnection();
 
+                // --------------------------------------------
+                // Assign a unique client-id to the connection:
+                // --------------------------------------------
+                // Durable subscribers must use a connection with an assigned
+                // client-id.   Only one connection with a given client-id
+                // can exist in a cluster at the same time.  An alternative
+                // to using the API is to configure a client-id via connection
+                // factory configuration.
+
+                //connection.ClientID = DefaultClientId;
+
                 connection.Start();
 
-                producerSession = connection.CreateSession(Constants.SessionMode.AUTO_ACKNOWLEDGE);
+                producerSession = connection.CreateSession(Constants.SessionMode.CLIENT_ACKNOWLEDGE);
 
                 producer = producerSession.CreateProducer(topic);
 
-                producer.DeliveryMode = Constants.DeliveryMode.NON_PERSISTENT;
+                producer.DeliveryMode = Constants.DeliveryMode.PERSISTENT;
 
                 ITextMessage sendMessage = producerSession.CreateTextMessage(messageText);
 
@@ -129,7 +133,7 @@ namespace ObjectSharp.Demos.JMSClient
             }
         }
 
-        private static void ConsumeMessageFromTopicWithAutoAcknowledge(IContext context, string TopicName)
+        private static void ConsumeMessageFromTopicWithClientAcknowledge(IContext context, string TopicName)
         {
             IConnection connection = null;
             ISession consumerSession = null;
@@ -155,36 +159,75 @@ namespace ObjectSharp.Demos.JMSClient
 
                 ITopic topic = (ITopic)context.LookupDestination(TopicName);
 
-                IConnectionFactory cf = context.LookupConnectionFactory(cfName);
+                IConnectionFactory cf = context.LookupConnectionFactory(DefaultConnectionFactoryName);
 
                 connection = cf.CreateConnection();
 
-                connection.Start();
-
-                consumerSession = connection.CreateSession(Constants.SessionMode.AUTO_ACKNOWLEDGE);
-
-                consumer = consumerSession.CreateConsumer(topic);
-
-                // Using delegate to receive asynchronously any new message.
-
-                consumer.Message += new MessageEventHandler((cons, args) =>
-                {
-                    WriteMessage("Message received:", args.Message);
-
-                    // -----------------------------------------------------------------
-                    // If the consumer's session is CLIENT_ACKNOWLEDGE, remember to
-                    // call args.Message.Acknowledge() to prevent the message from
-                    // getting redelivered, or consumer.Session.Recover() to force redelivery.
-                    // Similarly, if the consumer's session is TRANSACTED, remember to
-                    // call consumer.Session.Commit() to prevent the message from
-                    // getting redeliverd, or consumer.Session.Rollback() to force redeivery.
-                });
-
-                // wait for new messages
+                // --------------------------------------------
+                // Assign a unique client-id to the connection:
+                // --------------------------------------------
+                // Durable subscribers must use a connection with an assigned
+                // client-id.   Only one connection with a given client-id
+                // can exist in a cluster at the same time.  An alternative
+                // to using the API is to configure a client-id via connection
+                // factory configuration.
 
                 while (!receivingThreadStop)
                 {
-                    Thread.Sleep(1000);
+                    try
+                    {
+                        connection.ClientID = DefaultClientId;
+
+                        connection.Start();
+
+                        Console.WriteLine("Connected and waiting for messages, press any key to end... \n");
+
+                        consumerSession = connection.CreateSession(Constants.SessionMode.CLIENT_ACKNOWLEDGE);
+
+                        // -----------------------------------------------
+                        // Create a durable subscription and its consumer.
+                        // -----------------------------------------------
+                        // Only one consumer at a time can attach to the durable
+                        // subscription for connection ID "MyConnectionID" and
+                        // subscription ID "MySubscriberID.
+                        //
+                        // Unlike queue consumers, topic consumers must be created
+                        // *before* a message is sent in order to receive the message!
+
+                        consumer = consumerSession.CreateDurableSubscriber(topic, DefaultSubscriberName);
+
+                        while (!receivingThreadStop)
+                        {
+                            // secondary loop: ends when there are no more mensages
+                            while (true)
+                            {
+                                IMessage message = consumer.ReceiveNoWait();
+
+                                if (message == null)
+                                {
+                                    break;
+                                }
+
+                                WriteMessage("Message received:", message);
+
+                                // If the consumer's session is CLIENT_ACKNOWLEDGE, remember to
+                                // call args.Message.Acknowledge() to prevent the message from
+                                // getting redelivered, or consumer.Session.Recover() to force redelivery.
+                                // Similarly, if the consumer's session is TRANSACTED, remember to
+                                // call consumer.Session.Commit() to prevent the message from
+                                // getting redeliverd, or consumer.Session.Rollback() to force redeivery.
+                                message.Acknowledge();
+                            }
+
+                            Thread.Sleep(1000);
+                        }
+                    }
+                    catch (InvalidClientIDException e)
+                    {
+                        Console.WriteLine("Another instance of the client is already running. Another attemp will be made...");
+
+                        Thread.Sleep(10000);
+                    }
                 }
             }
             finally
