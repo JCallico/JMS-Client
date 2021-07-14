@@ -19,50 +19,38 @@ namespace ObjectSharp.Demos.JMSClient
 
         private static bool receivingThreadStop = false;
 
+        private static int ReceiveAttemptDelay = 1000;
+        private static int ErrorAttemptDelay = 15000;
+
         static void Main(string[] args)
         {
-            IContext context = null;
-
             Parser.Default.ParseArguments<Options>(args)
                 .WithParsed(options =>
                 {
-                    try
+                    switch (options.Command)
                     {
-                        context = CreateContext();
+                        case OptionsCommand.Send:
 
-                        switch (options.Command)
-                        {
-                            case OptionsCommand.Send:
+                            SendMessageToTopic(DefaultTopicName, options.Message);
 
-                                SendMessageToTopic(context, DefaultTopicName, options.Message);
+                            break;
 
-                                break;
+                        case OptionsCommand.Receive:
 
-                            case OptionsCommand.Receive:
+                            var receivingThread = new Thread(() =>
+                            {
+                                RexeiveMessageaFromTopic(DefaultTopicName);
+                            });
 
-                                var receivingThread = new Thread(() =>
-                                {
-                                    ConsumeMessageFromTopicWithClientAcknowledge(context, DefaultTopicName);
-                                });
+                            receivingThread.Start();
 
-                                receivingThread.Start();
+                            Console.ReadKey();
 
-                                Console.ReadKey();
+                            receivingThreadStop = true;
 
-                                receivingThreadStop = true;
+                            receivingThread.Join();
 
-                                receivingThread.Join();
-
-                                break;
-                        }
-                    }
-                    finally
-                    {
-                        // Close the context.  The CloseAll method closes the network
-                        // connection and all related open connections, sessions, producers,
-                        // and consumers.
-
-                        context.CloseAll();
+                            break;
                     }
                 })
                 .WithNotParsed(errors =>
@@ -86,103 +74,105 @@ namespace ObjectSharp.Demos.JMSClient
             return ContextFactory.CreateContext(paramMap);
         }
 
-        private static void SendMessageToTopic(IContext context, string TopicName, string messageText)
+        private static void SendMessageToTopic(string TopicName, string messageText)
         {
-            IConnection connection = null;
-            ISession producerSession = null;
-            IMessageProducer producer = null;
+            IContext context = null;
 
             try
             {
-                ITopic topic = (ITopic)context.LookupDestination(TopicName);
+                while (true)
+                {
+                    try
+                    {
+                        context = CreateContext();
 
-                IConnectionFactory cf = context.LookupConnectionFactory(DefaultConnectionFactoryName);
+                        ITopic topic = (ITopic)context.LookupDestination(TopicName);
 
-                connection = cf.CreateConnection();
+                        IConnectionFactory cf = context.LookupConnectionFactory(DefaultConnectionFactoryName);
 
-                // --------------------------------------------
-                // Assign a unique client-id to the connection:
-                // --------------------------------------------
-                // Durable subscribers must use a connection with an assigned
-                // client-id.   Only one connection with a given client-id
-                // can exist in a cluster at the same time.  An alternative
-                // to using the API is to configure a client-id via connection
-                // factory configuration.
+                        IConnection connection = cf.CreateConnection();
 
-                //connection.ClientID = DefaultClientId;
+                        connection.Start();
 
-                connection.Start();
+                        Console.WriteLine("Connected and attemping to send message... \n");
 
-                producerSession = connection.CreateSession(Constants.SessionMode.CLIENT_ACKNOWLEDGE);
+                        ISession producerSession = connection.CreateSession(Constants.SessionMode.CLIENT_ACKNOWLEDGE);
 
-                producer = producerSession.CreateProducer(topic);
+                        IMessageProducer producer = producerSession.CreateProducer(topic);
 
-                producer.DeliveryMode = Constants.DeliveryMode.PERSISTENT;
+                        producer.DeliveryMode = Constants.DeliveryMode.PERSISTENT;
 
-                ITextMessage sendMessage = producerSession.CreateTextMessage(messageText);
+                        ITextMessage sendMessage = producerSession.CreateTextMessage(messageText);
 
-                producer.Send(sendMessage);
+                        producer.Send(sendMessage);
 
-                WriteMessage("Message sent:", sendMessage);
+                        WriteMessage("Message sent:", sendMessage);
+
+                        // exiting sending loop
+                        break;
+                    }
+                    catch (Exception e)
+                    {
+                        while (e.InnerException != null) e = e.InnerException;
+
+                        Console.WriteLine($"An error just happened: {e.Message}");
+
+                        // Close the context.  The CloseAll method closes the network
+                        // connection and all related open connections, sessions, producers,
+                        // and consumers.
+
+                        context?.CloseAll();
+
+                        Console.WriteLine("Sending will be resumed...");
+
+                        Thread.Sleep(ErrorAttemptDelay);
+                    }
+                }
             }
             finally
             {
-                producer?.Close();
-                producerSession?.Close();
-                connection?.Close();
+                // Close the context.  The CloseAll method closes the network
+                // connection and all related open connections, sessions, producers,
+                // and consumers.
+
+                context?.CloseAll();
             }
         }
 
-        private static void ConsumeMessageFromTopicWithClientAcknowledge(IContext context, string TopicName)
+        private static void RexeiveMessageaFromTopic(string TopicName)
         {
-            IConnection connection = null;
-            ISession consumerSession = null;
-            IMessageConsumer consumer = null;
+            IContext context = null;
 
             try
             {
-                // ------------------------------------------
-                // Create the asynchronous consumer delegate.   
-                // ------------------------------------------
-                // Create a session and a consumer; also designate a delegate 
-                // that listens for messages that arrive asynchronously.  
-                //
-                // Unlike queue consumers, topic consumers must be created
-                // *before* a message is sent in order to receive the message!
-                //
-                // IMPORTANT:  Sessions are not thread-safe.   We use multiple sessions 
-                // in order to run the producer and async consumer concurrently.  The
-                // consumer session and any of its producers and consumers 
-                // can no longer be used outside of the OnMessage
-                // callback once OnMessage is designated as its event handler, as
-                // messages for the event handler may arrive in another thread.
-
-                ITopic topic = (ITopic)context.LookupDestination(TopicName);
-
-                IConnectionFactory cf = context.LookupConnectionFactory(DefaultConnectionFactoryName);
-
-                connection = cf.CreateConnection();
-
-                // --------------------------------------------
-                // Assign a unique client-id to the connection:
-                // --------------------------------------------
-                // Durable subscribers must use a connection with an assigned
-                // client-id.   Only one connection with a given client-id
-                // can exist in a cluster at the same time.  An alternative
-                // to using the API is to configure a client-id via connection
-                // factory configuration.
-
                 while (!receivingThreadStop)
                 {
                     try
                     {
+                        context = CreateContext();
+
+                        ITopic topic = (ITopic)context.LookupDestination(TopicName);
+
+                        IConnectionFactory cf = context.LookupConnectionFactory(DefaultConnectionFactoryName);
+
+                        IConnection connection = cf.CreateConnection();
+
+                        // --------------------------------------------
+                        // Assign a unique client-id to the connection:
+                        // --------------------------------------------
+                        // Durable subscribers must use a connection with an assigned
+                        // client-id.   Only one connection with a given client-id
+                        // can exist in a cluster at the same time.  An alternative
+                        // to using the API is to configure a client-id via connection
+                        // factory configuration.
+
                         connection.ClientID = DefaultClientId;
 
                         connection.Start();
 
                         Console.WriteLine("Connected and waiting for messages, press any key to end... \n");
 
-                        consumerSession = connection.CreateSession(Constants.SessionMode.CLIENT_ACKNOWLEDGE);
+                        ISession consumerSession = connection.CreateSession(Constants.SessionMode.CLIENT_ACKNOWLEDGE);
 
                         // -----------------------------------------------
                         // Create a durable subscription and its consumer.
@@ -194,47 +184,76 @@ namespace ObjectSharp.Demos.JMSClient
                         // Unlike queue consumers, topic consumers must be created
                         // *before* a message is sent in order to receive the message!
 
-                        consumer = consumerSession.CreateDurableSubscriber(topic, DefaultSubscriberName);
+                        IMessageConsumer consumer = consumerSession.CreateDurableSubscriber(topic, DefaultSubscriberName);
 
                         while (!receivingThreadStop)
                         {
                             // secondary loop: ends when there are no more mensages
                             while (true)
                             {
-                                IMessage message = consumer.ReceiveNoWait();
-
-                                if (message == null)
+                                try
                                 {
-                                    break;
+                                    IMessage message = consumer.ReceiveNoWait();
+
+                                    if (message == null)
+                                    {
+                                        break;
+                                    }
+
+                                    WriteMessage("Message received:", message);
+
+                                    // todo: add handling logic here !!!!
+
+                                    // If the consumer's session is CLIENT_ACKNOWLEDGE, remember to
+                                    // call args.Message.Acknowledge() to prevent the message from
+                                    // getting redelivered, or consumer.Session.Recover() to force redelivery.
+                                    // Similarly, if the consumer's session is TRANSACTED, remember to
+                                    // call consumer.Session.Commit() to prevent the message from
+                                    // getting redeliverd, or consumer.Session.Rollback() to force redeivery.
+                                    message.Acknowledge();
                                 }
-
-                                WriteMessage("Message received:", message);
-
-                                // If the consumer's session is CLIENT_ACKNOWLEDGE, remember to
-                                // call args.Message.Acknowledge() to prevent the message from
-                                // getting redelivered, or consumer.Session.Recover() to force redelivery.
-                                // Similarly, if the consumer's session is TRANSACTED, remember to
-                                // call consumer.Session.Commit() to prevent the message from
-                                // getting redeliverd, or consumer.Session.Rollback() to force redeivery.
-                                message.Acknowledge();
+                                catch (Exception e)
+                                {
+                                    // if something failed while handling the message
+                                    // then forcing the message to be redelivered
+                                    consumer.Session.Recover();
+                                }
                             }
 
-                            Thread.Sleep(1000);
+                            Thread.Sleep(ReceiveAttemptDelay);
                         }
                     }
-                    catch (InvalidClientIDException e)
+                    catch (InvalidClientIDException)
                     {
                         Console.WriteLine("Another instance of the client is already running. Another attemp will be made...");
 
-                        Thread.Sleep(10000);
+                        Thread.Sleep(ErrorAttemptDelay);
+                    }
+                    catch (Exception e)
+                    {
+                        while (e.InnerException != null) e = e.InnerException;
+
+                        Console.WriteLine($"An error just happened: {e.Message}");
+
+                        // Close the context.  The CloseAll method closes the network
+                        // connection and all related open connections, sessions, producers,
+                        // and consumers.
+
+                        context?.CloseAll();
+
+                        Console.WriteLine("Receiving will be resumed...");
+
+                        Thread.Sleep(ErrorAttemptDelay);
                     }
                 }
             }
             finally
             {
-                consumer?.Close();
-                consumerSession?.Close();
-                connection?.Close();
+                // Close the context.  The CloseAll method closes the network
+                // connection and all related open connections, sessions, producers,
+                // and consumers.
+
+                context.CloseAll();
             }
         }
 
