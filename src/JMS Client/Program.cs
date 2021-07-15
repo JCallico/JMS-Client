@@ -132,6 +132,9 @@ namespace ObjectSharp.Demos.JMSClient
 
             try
             {
+                // first loop: assures that when a fatal error occurs the
+                // connection is restablished and the receiving process
+                // is restarted
                 while (true)
                 {
                     try
@@ -165,17 +168,20 @@ namespace ObjectSharp.Demos.JMSClient
                         // Create a durable subscription and its consumer.
                         // -----------------------------------------------
                         // Only one consumer at a time can attach to the durable
-                        // subscription for connection ID "MyConnectionID" and
-                        // subscription ID "MySubscriberID.
+                        // subscription for the same connection ID and
+                        // subscription ID.
                         //
                         // Unlike queue consumers, topic consumers must be created
                         // *before* a message is sent in order to receive the message!
 
                         IMessageConsumer consumer = consumerSession.CreateDurableSubscriber(topic, DefaultSubscriberName);
 
+                        // second loop: continues to check for messages
+                        // if none are available, sleeps for a while
+                        // and then checks for messages again
                         while (true)
                         {
-                            // secondary loop: ends when there are no more mensages
+                            // third loop: continues to receive messages until there are no more available
                             while (true)
                             {
                                 try
@@ -201,9 +207,15 @@ namespace ObjectSharp.Demos.JMSClient
                                 }
                                 catch (Exception e)
                                 {
+                                    while (e.InnerException != null) e = e.InnerException;
+
+                                    Console.WriteLine($"An error just happened handing a message: {e.Message}");
+
                                     // if something failed while handling the message
                                     // then forcing the message to be redelivered
                                     consumer.Session.Recover();
+
+                                    Console.WriteLine("Message will be redelivered...");
                                 }
                             }
 
