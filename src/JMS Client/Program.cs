@@ -17,8 +17,6 @@ namespace ObjectSharp.Demos.JMSClient
         private static string DefaultClientId = ConfigurationManager.AppSettings["DefaultClientId"];
         private static string DefaultProviderUrl = ConfigurationManager.AppSettings["DefaultProviderUrl"];
 
-        private static bool receivingThreadStop = false;
-
         private static int ReceiveAttemptDelay = 1000;
         private static int ErrorAttemptDelay = 15000;
 
@@ -37,18 +35,7 @@ namespace ObjectSharp.Demos.JMSClient
 
                         case OptionsCommand.Receive:
 
-                            var receivingThread = new Thread(() =>
-                            {
-                                RexeiveMessageaFromTopic(DefaultTopicName);
-                            });
-
-                            receivingThread.Start();
-
-                            Console.ReadKey();
-
-                            receivingThreadStop = true;
-
-                            receivingThread.Join();
+                            ReceiveMessagesFromTopic(DefaultTopicName);
 
                             break;
                     }
@@ -139,13 +126,13 @@ namespace ObjectSharp.Demos.JMSClient
             }
         }
 
-        private static void RexeiveMessageaFromTopic(string TopicName)
+        private static void ReceiveMessagesFromTopic(string TopicName)
         {
             IContext context = null;
 
             try
             {
-                while (!receivingThreadStop)
+                while (true)
                 {
                     try
                     {
@@ -170,7 +157,7 @@ namespace ObjectSharp.Demos.JMSClient
 
                         connection.Start();
 
-                        Console.WriteLine("Connected and waiting for messages, press any key to end... \n");
+                        Console.WriteLine("Connected and waiting for messages... \n");
 
                         ISession consumerSession = connection.CreateSession(Constants.SessionMode.CLIENT_ACKNOWLEDGE);
 
@@ -186,7 +173,7 @@ namespace ObjectSharp.Demos.JMSClient
 
                         IMessageConsumer consumer = consumerSession.CreateDurableSubscriber(topic, DefaultSubscriberName);
 
-                        while (!receivingThreadStop)
+                        while (true)
                         {
                             // secondary loop: ends when there are no more mensages
                             while (true)
