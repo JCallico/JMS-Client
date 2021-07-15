@@ -11,14 +11,14 @@ namespace ObjectSharp.Demos.JMSClient
 {
     class Program
     {
-        private static string DefaultConnectionFactoryName = ConfigurationManager.AppSettings["DefaultConnectionFactoryName"];
-        private static string DefaultTopicName = ConfigurationManager.AppSettings["DefaultTopicName"];
-        private static string DefaultSubscriberName = ConfigurationManager.AppSettings["DefaultSubscriberName"];
-        private static string DefaultClientId = ConfigurationManager.AppSettings["DefaultClientId"];
-        private static string DefaultProviderUrl = ConfigurationManager.AppSettings["DefaultProviderUrl"];
+        private static string DefaultConnectionFactoryName = ConfigurationManager.AppSettings["Default.ConnectionFactoryName"];
+        private static string DefaultTopicName = ConfigurationManager.AppSettings["Default.TopicName"];
+        private static string DefaultSubscriberName = ConfigurationManager.AppSettings["Default.SubscriberName"];
+        private static string DefaultClientId = ConfigurationManager.AppSettings["Default.ClientId"];
+        private static string DefaultProviderUrl = ConfigurationManager.AppSettings["Default.ProviderUrl"];
 
-        private static int ReceiveAttemptDelay = 1000;
-        private static int ErrorAttemptDelay = 15000;
+        private static int ReceiveAttemptInterval = int.Parse(ConfigurationManager.AppSettings["Global.ReceiveAttemptInterval"] ?? "5000");
+        private static int ErrorAttemptInterval = int.Parse(ConfigurationManager.AppSettings["Global.ErrorAttemptInterval"] ?? "15000");
 
         static void Main(string[] args)
         {
@@ -53,6 +53,12 @@ namespace ObjectSharp.Demos.JMSClient
 
         private static IContext CreateContext()
         {
+            // -------------------------------------------------
+            // Obtain a network connection to a WebLogic Server:
+            // -------------------------------------------------
+            // It also represents a naming context, which consists of methods for obtaining
+            // JNDI name-to-object bindings for JMS destinations and connection factories.
+
             IDictionary<string, object> paramMap = new Dictionary<string, object>
             {
                 { Constants.Context.PROVIDER_URL, DefaultProviderUrl }
@@ -112,7 +118,7 @@ namespace ObjectSharp.Demos.JMSClient
 
                         Console.WriteLine("Sending will be resumed...");
 
-                        Thread.Sleep(ErrorAttemptDelay);
+                        Thread.Sleep(ErrorAttemptInterval);
                     }
                 }
             }
@@ -160,7 +166,7 @@ namespace ObjectSharp.Demos.JMSClient
 
                         connection.Start();
 
-                        Console.WriteLine("Connected and waiting for messages... \n");
+                        Console.WriteLine("Connected... \n");
 
                         ISession consumerSession = connection.CreateSession(Constants.SessionMode.CLIENT_ACKNOWLEDGE);
 
@@ -184,9 +190,13 @@ namespace ObjectSharp.Demos.JMSClient
                             // third loop: continues to receive messages until there are no more available
                             while (true)
                             {
+                                Console.WriteLine("Checking for new messages...");
+
+                                IMessage message = null;
+
                                 try
                                 {
-                                    IMessage message = consumer.ReceiveNoWait();
+                                    message = consumer.ReceiveNoWait();
 
                                     if (message == null)
                                     {
@@ -209,24 +219,24 @@ namespace ObjectSharp.Demos.JMSClient
                                 {
                                     while (e.InnerException != null) e = e.InnerException;
 
-                                    Console.WriteLine($"An error just happened handing a message: {e.Message}");
+                                    Console.WriteLine($"An error just happened handing message {message.JMSMessageID}: {e.Message}");
 
                                     // if something failed while handling the message
                                     // then forcing the message to be redelivered
                                     consumer.Session.Recover();
 
-                                    Console.WriteLine("Message will be redelivered...");
+                                    Console.WriteLine($"Message {message.JMSMessageID} will be redelivered...");
                                 }
                             }
 
-                            Thread.Sleep(ReceiveAttemptDelay);
+                            Thread.Sleep(ReceiveAttemptInterval);
                         }
                     }
                     catch (InvalidClientIDException)
                     {
-                        Console.WriteLine("Another instance of the client is already running. Another attemp will be made...");
+                        Console.WriteLine("Another instance using the same Client ID is already running. Another connection attemp will be made...");
 
-                        Thread.Sleep(ErrorAttemptDelay);
+                        Thread.Sleep(ErrorAttemptInterval);
                     }
                     catch (Exception e)
                     {
@@ -242,7 +252,7 @@ namespace ObjectSharp.Demos.JMSClient
 
                         Console.WriteLine("Receiving will be resumed...");
 
-                        Thread.Sleep(ErrorAttemptDelay);
+                        Thread.Sleep(ErrorAttemptInterval);
                     }
                 }
             }
