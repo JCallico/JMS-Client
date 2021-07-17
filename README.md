@@ -6,7 +6,7 @@ An experimental project to understand different JMS clients.
 
 A simple client console app for WebLogic JMS.
 
-It uses the [TIBCO EMS .NET API](https://docs.oracle.com/cd/E24329_01/web.1211/e24386/toc.htm) to interact with TIBCO EMS.
+It uses the [TIBCO EMS .NET API](https://docs.tibco.com/pub/ems/8.6.0/doc/html/api/dotnetdoc/html/namespace_t_i_b_c_o_1_1_e_m_s.html) to interact with TIBCO EMS.
 
 Currently only sending and receiving from topics is supported.
 
