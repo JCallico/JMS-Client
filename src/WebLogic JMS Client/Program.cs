@@ -87,7 +87,7 @@ namespace ObjectSharp.Demos.JMSClient.WebLogicJMSClient
 
                         connection.Start();
 
-                        Console.WriteLine("Connected and attemping to send message... \n");
+                        Console.WriteLine("Connected and attemping to send message...");
 
                         ISession producerSession = connection.CreateSession(Constants.SessionMode.CLIENT_ACKNOWLEDGE);
 
@@ -166,7 +166,7 @@ namespace ObjectSharp.Demos.JMSClient.WebLogicJMSClient
 
                         connection.Start();
 
-                        Console.WriteLine("Connected... \n");
+                        Console.WriteLine("Connected...");
 
                         ISession consumerSession = connection.CreateSession(Constants.SessionMode.CLIENT_ACKNOWLEDGE);
 
@@ -219,13 +219,21 @@ namespace ObjectSharp.Demos.JMSClient.WebLogicJMSClient
                                 {
                                     while (e.InnerException != null) e = e.InnerException;
 
-                                    Console.WriteLine($"An error just happened handing message {message.JMSMessageID}: {e.Message}");
+                                    if (message != null)
+                                    {
 
-                                    // if something failed while handling the message
-                                    // then forcing the message to be redelivered
-                                    consumer.Session.Recover();
+                                        Console.WriteLine($"An error just happened handing message {message.JMSMessageID}: {e.Message}");
 
-                                    Console.WriteLine($"Message {message.JMSMessageID} will be redelivered...");
+                                        // if something failed while handling the message
+                                        // then forcing the message to be redelivered
+                                        consumer.Session.Recover();
+
+                                        Console.WriteLine($"Message {message.JMSMessageID} will be redelivered...");
+                                    }
+                                    else
+                                    {
+                                        Console.WriteLine($"An error just happened: {e.Message}");
+                                    }
                                 }
                             }
 
@@ -266,19 +274,17 @@ namespace ObjectSharp.Demos.JMSClient.WebLogicJMSClient
             }
         }
 
-        private static void WriteMessage(string header, IMessage msg)
+        private static void WriteMessage(string header, IMessage message)
         {
             string text;
 
-            ITextMessage textMessage = msg as ITextMessage;
-            if (msg != null)
+            ITextMessage textMessage = message as ITextMessage;
+            if (message != null)
                 text = textMessage.Text + Environment.NewLine;
             else
                 text = "Not available";
 
-            Console.WriteLine(header + Environment.NewLine +
-              " Message ID = " + msg.JMSMessageID + Environment.NewLine +
-              " Text: " + text);
+            Console.WriteLine($"{header}\n- Message ID: {message.JMSMessageID}\n- Text: {text}");
         }
 
         public class Options
