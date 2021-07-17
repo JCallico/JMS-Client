@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "TIBCO EMS Client": {
+      "commandName": "Project",
+      "commandLineArgs": "-c \"Receive\""
+    }
+  }
+}
