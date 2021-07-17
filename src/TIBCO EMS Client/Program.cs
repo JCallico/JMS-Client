@@ -1,4 +1,5 @@
 ﻿using CommandLine;
+using Microsoft.Extensions.Configuration;
 using System;
 using System.IO;
 using System.Reflection;
@@ -9,13 +10,13 @@ namespace ObjectSharp.Demos.JMSClient.TibcoEmsClient
 {
     class Program
     {
-        private static string DefaultTopicName = "dizzyworldTopic"; // ConfigurationManager.AppSettings["Default.TopicName"];
-        private static string DefaultSubscriberName = "Default"; //ConfigurationManager.AppSettings["Default.SubscriberName"];
-        private static string DefaultClientId = "Default"; //ConfigurationManager.AppSettings["Default.ClientId"];
-        private static string DefaultProviderUrl = "tcp://localhost:7222"; //ConfigurationManager.AppSettings["Default.ProviderUrl"];
+        private static string DefaultTopicName = Configuration["appSettings:Default.TopicName"];
+        private static string DefaultSubscriberName = Configuration["appSettings:Default.SubscriberName"];
+        private static string DefaultClientId = Configuration["appSettings:Default.ClientId"];
+        private static string DefaultProviderUrl = Configuration["appSettings:Default.ProviderUrl"];
 
-        private static int ReceiveAttemptInterval = 5000; // int.Parse(ConfigurationManager.AppSettings["Global.ReceiveAttemptInterval"] ?? "5000");
-        private static int ErrorAttemptInterval = 15000; // int.Parse(ConfigurationManager.AppSettings["Global.ErrorAttemptInterval"] ?? "15000");
+        private static int ReceiveAttemptInterval = int.Parse(Configuration["appSettings:Global.ReceiveAttemptInterval"] ?? "5000");
+        private static int ErrorAttemptInterval = int.Parse(Configuration["appSettings:Global.ErrorAttemptInterval"] ?? "15000");
 
         static void Main(string[] args)
         {
@@ -46,6 +47,22 @@ namespace ObjectSharp.Demos.JMSClient.TibcoEmsClient
                     Console.WriteLine($"{name} -c \"Send\" -m \"Message text\"");
                     Console.WriteLine($"{name} -c \"Receive\" ");
                 });
+        }
+
+        private static IConfiguration _configuration;
+        private static IConfiguration Configuration
+        {
+            get
+            {
+                if (_configuration == null)
+                {
+                    _configuration = new ConfigurationBuilder()
+                        .AddJsonFile("appsettings.json", true, true)
+                        .Build();
+                }
+
+                return _configuration;
+            }
         }
 
         private static void SendMessageToTopic(string TopicName, string messageText)
