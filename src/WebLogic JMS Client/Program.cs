@@ -232,7 +232,9 @@ namespace ObjectSharp.Demos.JMSClient.WebLogicJMSClient
                                     }
                                     else
                                     {
-                                        Console.WriteLine($"An error just happened: {e.Message}");
+                                        // the exception is not related to message handling
+                                        // rethrowing in order to force reconnection
+                                        throw;
                                     }
                                 }
                             }
