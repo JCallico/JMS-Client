@@ -12,6 +12,8 @@ A simple client console app for TIBCO EMS.
 
 * Targets .NET Core 3.1
 
+[![Build TIBCO EMS Client](https://github.com/JCallico/JMS-Client/actions/workflows/build_tibco_ems_client.yml/badge.svg)](https://github.com/JCallico/JMS-Client/actions/workflows/build_tibco_ems_client.yml)
+
 ### Sample usages
 
 #### Sending a message
