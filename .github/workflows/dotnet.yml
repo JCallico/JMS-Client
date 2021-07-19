@@ -1,4 +1,4 @@
-name: .NET
+name: Build TIBCO EMS Client
 
 on:
   push:
@@ -16,10 +16,13 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@v1
       with:
-        dotnet-version: 5.0.x
+        dotnet-version: 5.0.x       
     - name: Restore dependencies
       run: dotnet restore
+      working-directory: src/TIBCO EMS Client
     - name: Build
       run: dotnet build --no-restore
+      working-directory: src/TIBCO EMS Client
     - name: Test
       run: dotnet test --no-build --verbosity normal
+      working-directory: src/TIBCO EMS Client
