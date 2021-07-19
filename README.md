@@ -2,6 +2,8 @@
 
 An experimental project to understand different JMS clients.
 
+[![Build Solution](https://github.com/JCallico/JMS-Client/actions/workflows/build_solution.yml/badge.svg)](https://github.com/JCallico/JMS-Client/actions/workflows/build_solution.yml)
+
 ## TIBCO EMS Client
 
 A simple client console app for TIBCO EMS.
