@@ -1,4 +1,4 @@
-name: Build WebLogic JMC client
+name: Build Solution
  
 on:
   push:
@@ -22,9 +22,9 @@ jobs:
       uses: NuGet/setup-nuget@v1
      
     - name: Restore NuGet Packages
-      run: nuget restore JMS Client.sln
+      run: nuget restore "JMS Client.sln"
       working-directory: src
 
     - name: Build
-      run: msbuild JMS Client.sln /p:Configuration=Release
+      run: msbuild "JMS Client.sln" /p:Configuration=Release
       working-directory: src      
