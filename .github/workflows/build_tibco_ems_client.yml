@@ -1,4 +1,4 @@
-name: Build TIBCO EMS Client
+name: Build TIBCO EMS Client (.NET Core 3.1)
 
 on:
   push:
@@ -16,7 +16,7 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@v1
       with:
-        dotnet-version: 5.0.x       
+        dotnet-version: 3.1.x      
     - name: Restore dependencies
       run: dotnet restore
       working-directory: src/TIBCO EMS Client
