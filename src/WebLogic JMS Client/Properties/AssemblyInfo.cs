@@ -8,9 +8,9 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyTitle("JMS Client")]
 [assembly: AssemblyDescription("A sample WebLogic JMS client")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("ObjectSharp")]
+[assembly: AssemblyCompany("Callicode Inc.")]
 [assembly: AssemblyProduct("JMS Connector Client")]
-[assembly: AssemblyCopyright("Copyright © ObjectSharp  2021")]
+[assembly: AssemblyCopyright("Copyright © Callicode Inc. 2021")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 

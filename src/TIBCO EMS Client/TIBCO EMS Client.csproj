@@ -5,6 +5,10 @@
     <TargetFramework>netcoreapp3.1</TargetFramework>
     <RootNamespace>ObjectSharp.Demos.JMSClient.TibcoEmsClient</RootNamespace>
     <AssemblyName>TibcoEmsClient</AssemblyName>
+    <Authors>Javier Callico</Authors>
+    <Company>Callicode Inc.</Company>
+    <Copyright>Copyright © Callicode Inc. 2021</Copyright>
+    <Description>A sample TIBCO EMS client</Description>
   </PropertyGroup>
 
   <ItemGroup>
