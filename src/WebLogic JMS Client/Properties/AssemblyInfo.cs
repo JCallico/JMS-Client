@@ -10,7 +10,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("Callicode Inc.")]
 [assembly: AssemblyProduct("JMS Connector Client")]
-[assembly: AssemblyCopyright("Copyright © Callicode Inc. 2021")]
+[assembly: AssemblyCopyright("Copyright © Javier Callico 2021")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 

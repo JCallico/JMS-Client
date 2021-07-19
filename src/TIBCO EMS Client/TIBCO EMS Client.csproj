@@ -7,8 +7,9 @@
     <AssemblyName>TibcoEmsClient</AssemblyName>
     <Authors>Javier Callico</Authors>
     <Company>Callicode Inc.</Company>
-    <Copyright>Copyright © Callicode Inc. 2021</Copyright>
+    <Copyright>Copyright © Javier Callico 2021</Copyright>
     <Description>A sample TIBCO EMS client</Description>
+    <PackageLicenseFile>LICENSE.md</PackageLicenseFile>
   </PropertyGroup>
 
   <ItemGroup>
@@ -26,6 +27,10 @@
   <ItemGroup>
     <None Update="appsettings.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\..\LICENSE.md">
+      <Pack>True</Pack>
+      <PackagePath></PackagePath>
     </None>
   </ItemGroup>
 
