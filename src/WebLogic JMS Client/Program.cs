@@ -11,14 +11,14 @@ namespace ObjectSharp.Demos.JMSClient.WebLogicJMSClient
 {
     class Program
     {
-        private static string DefaultConnectionFactoryName = ConfigurationManager.AppSettings["Default.ConnectionFactoryName"];
-        private static string DefaultTopicName = ConfigurationManager.AppSettings["Default.TopicName"];
-        private static string DefaultSubscriberName = ConfigurationManager.AppSettings["Default.SubscriberName"];
-        private static string DefaultClientId = ConfigurationManager.AppSettings["Default.ClientId"];
-        private static string DefaultProviderUrl = ConfigurationManager.AppSettings["Default.ProviderUrl"];
+        private static readonly string DefaultConnectionFactoryName = ConfigurationManager.AppSettings["Default.ConnectionFactoryName"];
+        private static readonly string DefaultTopicName = ConfigurationManager.AppSettings["Default.TopicName"];
+        private static readonly string DefaultSubscriberName = ConfigurationManager.AppSettings["Default.SubscriberName"];
+        private static readonly string DefaultClientId = ConfigurationManager.AppSettings["Default.ClientId"];
+        private static readonly string DefaultProviderUrl = ConfigurationManager.AppSettings["Default.ProviderUrl"];
 
-        private static int ReceiveAttemptInterval = int.Parse(ConfigurationManager.AppSettings["Global.ReceiveAttemptInterval"] ?? "5000");
-        private static int ErrorAttemptInterval = int.Parse(ConfigurationManager.AppSettings["Global.ErrorAttemptInterval"] ?? "15000");
+        private static readonly int ReceiveAttemptInterval = int.Parse(ConfigurationManager.AppSettings["Global.ReceiveAttemptInterval"] ?? "5000");
+        private static readonly int ErrorAttemptInterval = int.Parse(ConfigurationManager.AppSettings["Global.ErrorAttemptInterval"] ?? "15000");
 
         static void Main(string[] args)
         {
@@ -29,7 +29,7 @@ namespace ObjectSharp.Demos.JMSClient.WebLogicJMSClient
                     {
                         case OptionsCommand.Send:
 
-                            SendMessageToTopic(DefaultTopicName, options.Message);
+                            SendMessageToTopic(DefaultTopicName, options.Message, options.NumberOfMessages, options.DelayBetweenMessages);
 
                             break;
 
@@ -45,8 +45,8 @@ namespace ObjectSharp.Demos.JMSClient.WebLogicJMSClient
                     string codeBase = Assembly.GetExecutingAssembly().CodeBase;
                     string name = Path.GetFileName(codeBase);
 
-                    Console.WriteLine($"Usage:");
-                    Console.WriteLine($"{name} -c \"Send\" -m \"Message text\"");
+                    Console.WriteLine("Usage:");
+                    Console.WriteLine($"{name} -c \"Send\" -m \"Message text\" -n 10 -d 100");
                     Console.WriteLine($"{name} -c \"Receive\" ");
                 });           
         }
@@ -67,9 +67,11 @@ namespace ObjectSharp.Demos.JMSClient.WebLogicJMSClient
             return ContextFactory.CreateContext(paramMap);
         }
 
-        private static void SendMessageToTopic(string TopicName, string messageText)
+        private static void SendMessageToTopic(string topicName, string messageText, int numberOfMessages = 1, int delayBetweenMessages = 0)
         {
             IContext context = null;
+
+            int numberOfMessagesSent = 0;
 
             try
             {
@@ -79,7 +81,7 @@ namespace ObjectSharp.Demos.JMSClient.WebLogicJMSClient
                     {
                         context = CreateContext();
 
-                        ITopic topic = (ITopic)context.LookupDestination(TopicName);
+                        ITopic topic = (ITopic)context.LookupDestination(topicName);
 
                         IConnectionFactory cf = context.LookupConnectionFactory(DefaultConnectionFactoryName);
 
@@ -87,7 +89,7 @@ namespace ObjectSharp.Demos.JMSClient.WebLogicJMSClient
 
                         connection.Start();
 
-                        Console.WriteLine("Connected and attemping to send message...");
+                        Console.WriteLine("Connected and attempting to send message...");
 
                         ISession producerSession = connection.CreateSession(Constants.SessionMode.CLIENT_ACKNOWLEDGE);
 
@@ -95,11 +97,21 @@ namespace ObjectSharp.Demos.JMSClient.WebLogicJMSClient
 
                         producer.DeliveryMode = Constants.DeliveryMode.PERSISTENT;
 
-                        ITextMessage sendMessage = producerSession.CreateTextMessage(messageText);
+                        while (numberOfMessagesSent < numberOfMessages)
+                        {
+                            ITextMessage sendMessage = producerSession.CreateTextMessage(messageText);
 
-                        producer.Send(sendMessage);
+                            producer.Send(sendMessage);
 
-                        WriteMessage("Message sent:", sendMessage);
+                            numberOfMessagesSent++;
+
+                            WriteMessage("Message sent:", sendMessage);
+
+                            if (delayBetweenMessages != 0)
+                            {
+                                Thread.Sleep(delayBetweenMessages);
+                            }
+                        }
 
                         // exiting sending loop
                         break;
@@ -132,14 +144,14 @@ namespace ObjectSharp.Demos.JMSClient.WebLogicJMSClient
             }
         }
 
-        private static void ReceiveMessagesFromTopic(string TopicName)
+        private static void ReceiveMessagesFromTopic(string topicName)
         {
             IContext context = null;
 
             try
             {
                 // first loop: assures that when a fatal error occurs the
-                // connection is restablished and the receiving process
+                // connection is reestablish and the receiving process
                 // is restarted
                 while (true)
                 {
@@ -147,7 +159,7 @@ namespace ObjectSharp.Demos.JMSClient.WebLogicJMSClient
                     {
                         context = CreateContext();
 
-                        ITopic topic = (ITopic)context.LookupDestination(TopicName);
+                        ITopic topic = (ITopic)context.LookupDestination(topicName);
 
                         IConnectionFactory cf = context.LookupConnectionFactory(DefaultConnectionFactoryName);
 
@@ -212,7 +224,7 @@ namespace ObjectSharp.Demos.JMSClient.WebLogicJMSClient
                                     // getting redelivered, or consumer.Session.Recover() to force redelivery.
                                     // Similarly, if the consumer's session is TRANSACTED, remember to
                                     // call consumer.Session.Commit() to prevent the message from
-                                    // getting redeliverd, or consumer.Session.Rollback() to force redeivery.
+                                    // getting redelivered, or consumer.Session.Rollback() to force redelivery.
                                     message.Acknowledge();
                                 }
                                 catch (Exception e)
@@ -244,7 +256,7 @@ namespace ObjectSharp.Demos.JMSClient.WebLogicJMSClient
                     }
                     catch (InvalidClientIDException)
                     {
-                        Console.WriteLine("Another instance using the same Client ID is already running. Another connection attemp will be made...");
+                        Console.WriteLine("Another instance using the same Client ID is already running. Another connection attempt will be made...");
 
                         Thread.Sleep(ErrorAttemptInterval);
                     }
@@ -272,19 +284,13 @@ namespace ObjectSharp.Demos.JMSClient.WebLogicJMSClient
                 // connection and all related open connections, sessions, producers,
                 // and consumers.
 
-                context.CloseAll();
+                context?.CloseAll();
             }
         }
 
         private static void WriteMessage(string header, IMessage message)
         {
-            string text;
-
-            ITextMessage textMessage = message as ITextMessage;
-            if (message != null)
-                text = textMessage.Text + Environment.NewLine;
-            else
-                text = "Not available";
+            var text = message is ITextMessage textMessage ? textMessage.Text : "Not available";
 
             Console.WriteLine($"{header}\n- Message ID: {message.JMSMessageID}\n- Text: {text}");
         }
@@ -296,6 +302,12 @@ namespace ObjectSharp.Demos.JMSClient.WebLogicJMSClient
 
             [Option('m', "message", Required = false, HelpText = "The message to send")]
             public string Message { get; set; }
+
+            [Option('n', "numberOfMessages", Required = false, HelpText = "The number of message(s) to send", Default = 1)]
+            public int NumberOfMessages { get; set; }
+
+            [Option('d', "delayBetweenMessages", Required = false, HelpText = "The delay between message(s) in milliseconds", Default = 0)]
+            public int DelayBetweenMessages { get; set; }
         }
 
         public enum OptionsCommand

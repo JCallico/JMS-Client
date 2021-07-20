@@ -1,8 +1,6 @@
 ﻿using CommandLine;
 using Microsoft.Extensions.Configuration;
 using System;
-using System.IO;
-using System.Reflection;
 using System.Threading;
 using TIBCO.EMS;
 
@@ -10,13 +8,13 @@ namespace ObjectSharp.Demos.JMSClient.TibcoEmsClient
 {
     class Program
     {
-        private static string DefaultTopicName = Configuration["appSettings:Default.TopicName"];
-        private static string DefaultSubscriberName = Configuration["appSettings:Default.SubscriberName"];
-        private static string DefaultClientId = Configuration["appSettings:Default.ClientId"];
-        private static string DefaultProviderUrl = Configuration["appSettings:Default.ProviderUrl"];
+        private static readonly string DefaultTopicName = Configuration["appSettings:Default.TopicName"];
+        private static readonly string DefaultSubscriberName = Configuration["appSettings:Default.SubscriberName"];
+        private static readonly string DefaultClientId = Configuration["appSettings:Default.ClientId"];
+        private static readonly string DefaultProviderUrl = Configuration["appSettings:Default.ProviderUrl"];
 
-        private static int ReceiveAttemptInterval = int.Parse(Configuration["appSettings:Global.ReceiveAttemptInterval"] ?? "5000");
-        private static int ErrorAttemptInterval = int.Parse(Configuration["appSettings:Global.ErrorAttemptInterval"] ?? "15000");
+        private static readonly int ReceiveAttemptInterval = int.Parse(Configuration["appSettings:Global.ReceiveAttemptInterval"] ?? "5000");
+        private static readonly int ErrorAttemptInterval = int.Parse(Configuration["appSettings:Global.ErrorAttemptInterval"] ?? "15000");
 
         static void Main(string[] args)
         {
@@ -27,7 +25,7 @@ namespace ObjectSharp.Demos.JMSClient.TibcoEmsClient
                     {
                         case OptionsCommand.Send:
 
-                            SendMessageToTopic(DefaultTopicName, options.Message);
+                            SendMessageToTopic(DefaultTopicName, options.Message, options.NumberOfMessages, options.DelayBetweenMessages);
 
                             break;
 
@@ -40,11 +38,10 @@ namespace ObjectSharp.Demos.JMSClient.TibcoEmsClient
                 })
                 .WithNotParsed(errors =>
                 {
-                    string codeBase = Assembly.GetExecutingAssembly().CodeBase;
-                    string name = Path.GetFileName(codeBase);
+                    string name = AppDomain.CurrentDomain.FriendlyName;
 
-                    Console.WriteLine($"Usage:");
-                    Console.WriteLine($"{name} -c \"Send\" -m \"Message text\"");
+                    Console.WriteLine("Usage:");
+                    Console.WriteLine($"{name} -c \"Send\" -m \"Message text\" -n 10 -d 100");
                     Console.WriteLine($"{name} -c \"Receive\" ");
                 });
         }
@@ -65,15 +62,17 @@ namespace ObjectSharp.Demos.JMSClient.TibcoEmsClient
             }
         }
 
-        private static void SendMessageToTopic(string TopicName, string messageText)
+        private static void SendMessageToTopic(string topicName, string messageText, int numberOfMessages = 1, int delayBetweenMessages = 0)
         {
             TopicConnection publisherConnection = null;
             TopicSession publisherSession = null;
             TopicPublisher publisher = null;
 
+            int numberOfMessagesSent = 0;
+
             try
             {
-                while (true)
+                while (numberOfMessagesSent < numberOfMessages)
                 {
                     try
                     {
@@ -83,23 +82,29 @@ namespace ObjectSharp.Demos.JMSClient.TibcoEmsClient
                         
                         publisherSession = publisherConnection.CreateTopicSession(false, Session.CLIENT_ACKNOWLEDGE);
                         
-                        Topic generalTopic = publisherSession.CreateTopic(TopicName);
+                        Topic generalTopic = publisherSession.CreateTopic(topicName);
                         
                         publisher = publisherSession.CreatePublisher(generalTopic);
 
                         publisherConnection.Start();
 
-                        Console.WriteLine("Connected and attemping to send message...");
+                        Console.WriteLine("Connected and attempting to send message...");
 
-                        TextMessage message = publisherSession.CreateTextMessage();
-                        message.Text = messageText;
-                        
-                        // any properties
-                        //textMessage.SetStringProperty("propertyName", "propertyValue");
-                        
-                        publisher.Publish(message);
+                        while (numberOfMessagesSent < numberOfMessages)
+                        {
+                            TextMessage message = publisherSession.CreateTextMessage(messageText);
 
-                        WriteMessage("Message sent:", message);
+                            publisher.Publish(message);
+
+                            numberOfMessagesSent++;
+
+                            WriteMessage("Message sent:", message);
+
+                            if (delayBetweenMessages != 0)
+                            {
+                                Thread.Sleep(delayBetweenMessages);
+                            }
+                        }
 
                         // exiting sending loop
                         break;
@@ -130,7 +135,7 @@ namespace ObjectSharp.Demos.JMSClient.TibcoEmsClient
             }
         }
 
-        private static void ReceiveMessagesFromTopic(string TopicName)
+        private static void ReceiveMessagesFromTopic(string topicName)
         {
             TopicConnection subscriberConnection = null;
             TopicSession subscriberSession = null;
@@ -139,7 +144,7 @@ namespace ObjectSharp.Demos.JMSClient.TibcoEmsClient
             try
             {
                 // first loop: assures that when a fatal error occurs the
-                // connection is restablished and the receiving process
+                // connection is reestablished and the receiving process
                 // is restarted
                 while (true)
                 {
@@ -155,7 +160,7 @@ namespace ObjectSharp.Demos.JMSClient.TibcoEmsClient
 
                         subscriberSession = subscriberConnection.CreateTopicSession(false, Session.CLIENT_ACKNOWLEDGE);
                         
-                        Topic clientTopic = subscriberSession.CreateTopic(TopicName);
+                        Topic clientTopic = subscriberSession.CreateTopic(topicName);
                         
                         subscriber = subscriberSession.CreateDurableSubscriber(clientTopic, DefaultSubscriberName, string.Empty, true);
 
@@ -189,7 +194,7 @@ namespace ObjectSharp.Demos.JMSClient.TibcoEmsClient
                                     // getting redelivered, or consumer.Session.Recover() to force redelivery.
                                     // Similarly, if the consumer's session is TRANSACTED, remember to
                                     // call consumer.Session.Commit() to prevent the message from
-                                    // getting redeliverd, or session.Rollback() to force redeivery.
+                                    // getting redelivered, or session.Rollback() to force redelivery.
                                     message.Acknowledge();
                                 }
                                 catch (Exception e)
@@ -220,7 +225,7 @@ namespace ObjectSharp.Demos.JMSClient.TibcoEmsClient
                     }
                     catch (InvalidClientIDException)
                     {
-                        Console.WriteLine("Another instance using the same Client ID is already running. Another connection attemp will be made...");
+                        Console.WriteLine("Another instance using the same Client ID is already running. Another connection attempt will be made...");
 
                         Thread.Sleep(ErrorAttemptInterval);
                     }
@@ -252,13 +257,7 @@ namespace ObjectSharp.Demos.JMSClient.TibcoEmsClient
 
         private static void WriteMessage(string header, Message message)
         {
-            string text;
-
-            TextMessage textMessage = message as TextMessage;
-            if (textMessage != null)
-                text = textMessage.Text;
-            else
-                text = "Not available";
+            var text = message is TextMessage textMessage ? textMessage.Text : "Not available";
 
             Console.WriteLine($"{header}\n- Message ID: {message.MessageID}\n- Text: {text}");
         }
@@ -270,6 +269,12 @@ namespace ObjectSharp.Demos.JMSClient.TibcoEmsClient
 
             [Option('m', "message", Required = false, HelpText = "The message to send")]
             public string Message { get; set; }
+
+            [Option('n', "numberOfMessages", Required = false, HelpText = "The number of message(s) to send", Default = 1)]
+            public int NumberOfMessages { get; set; }
+
+            [Option('d', "delayBetweenMessages", Required = false, HelpText = "The delay between message(s) in milliseconds", Default = 0)]
+            public int DelayBetweenMessages { get; set; }
         }
 
         public enum OptionsCommand
