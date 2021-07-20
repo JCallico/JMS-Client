@@ -3,6 +3,8 @@
 An experimental project to understand different JMS clients.
 
 [![Build Solution](https://github.com/JCallico/JMS-Client/actions/workflows/build_solution.yml/badge.svg)](https://github.com/JCallico/JMS-Client/actions/workflows/build_solution.yml)
+[![CodeQL](https://github.com/JCallico/JMS-Client/actions/workflows/codeql-analysis.yml/badge.svg)](https://github.com/JCallico/JMS-Client/actions/workflows/codeql-analysis.yml)
+[![DevSkim](https://github.com/JCallico/JMS-Client/actions/workflows/devskim-analysis.yml/badge.svg)](https://github.com/JCallico/JMS-Client/actions/workflows/devskim-analysis.yml)
 
 ## TIBCO EMS Client
 
