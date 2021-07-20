@@ -12,6 +12,8 @@ namespace ObjectSharp.Demos.JMSClient.TibcoEmsClient
         private static readonly string DefaultSubscriberName = Configuration["appSettings:Default.SubscriberName"];
         private static readonly string DefaultClientId = Configuration["appSettings:Default.ClientId"];
         private static readonly string DefaultProviderUrl = Configuration["appSettings:Default.ProviderUrl"];
+        private static readonly string DefaultUsername = Configuration["appSettings:Default.Username"] ?? string.Empty;
+        private static readonly string DefaultPassword = Configuration["appSettings:Default.Password"] ?? string.Empty;
 
         private static readonly int ReceiveAttemptInterval = int.Parse(Configuration["appSettings:Global.ReceiveAttemptInterval"] ?? "5000");
         private static readonly int ErrorAttemptInterval = int.Parse(Configuration["appSettings:Global.ErrorAttemptInterval"] ?? "15000");
@@ -78,7 +80,7 @@ namespace ObjectSharp.Demos.JMSClient.TibcoEmsClient
                     {
                         TopicConnectionFactory factory = new TopicConnectionFactory(DefaultProviderUrl);
 
-                        publisherConnection = factory.CreateTopicConnection("", ""); // Username, password
+                        publisherConnection = factory.CreateTopicConnection(DefaultUsername, DefaultPassword);
                         
                         publisherSession = publisherConnection.CreateTopicSession(false, Session.CLIENT_ACKNOWLEDGE);
                         
@@ -152,7 +154,7 @@ namespace ObjectSharp.Demos.JMSClient.TibcoEmsClient
                     {
                         TopicConnectionFactory factory = new TopicConnectionFactory(DefaultProviderUrl, DefaultClientId);
 
-                        subscriberConnection = factory.CreateTopicConnection("", "");  // Username, password
+                        subscriberConnection = factory.CreateTopicConnection(DefaultUsername, DefaultPassword);
 
                         subscriberConnection.Start();
 

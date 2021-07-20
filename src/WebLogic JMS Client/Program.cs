@@ -16,6 +16,8 @@ namespace ObjectSharp.Demos.JMSClient.WebLogicJMSClient
         private static readonly string DefaultSubscriberName = ConfigurationManager.AppSettings["Default.SubscriberName"];
         private static readonly string DefaultClientId = ConfigurationManager.AppSettings["Default.ClientId"];
         private static readonly string DefaultProviderUrl = ConfigurationManager.AppSettings["Default.ProviderUrl"];
+        private static readonly string DefaultUsername = ConfigurationManager.AppSettings["appSettings:Default.Username"] ?? string.Empty;
+        private static readonly string DefaultPassword = ConfigurationManager.AppSettings["appSettings:Default.Password"] ?? string.Empty;
 
         private static readonly int ReceiveAttemptInterval = int.Parse(ConfigurationManager.AppSettings["Global.ReceiveAttemptInterval"] ?? "5000");
         private static readonly int ErrorAttemptInterval = int.Parse(ConfigurationManager.AppSettings["Global.ErrorAttemptInterval"] ?? "15000");
@@ -85,7 +87,7 @@ namespace ObjectSharp.Demos.JMSClient.WebLogicJMSClient
 
                         IConnectionFactory cf = context.LookupConnectionFactory(DefaultConnectionFactoryName);
 
-                        IConnection connection = cf.CreateConnection();
+                        IConnection connection = cf.CreateConnection(DefaultUsername, DefaultPassword);
 
                         connection.Start();
 
@@ -163,7 +165,7 @@ namespace ObjectSharp.Demos.JMSClient.WebLogicJMSClient
 
                         IConnectionFactory cf = context.LookupConnectionFactory(DefaultConnectionFactoryName);
 
-                        IConnection connection = cf.CreateConnection();
+                        IConnection connection = cf.CreateConnection(DefaultUsername, DefaultPassword);
 
                         // --------------------------------------------
                         // Assign a unique client-id to the connection:
