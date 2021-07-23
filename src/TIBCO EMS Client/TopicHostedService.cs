@@ -48,7 +48,7 @@ namespace ObjectSharp.Demos.JMSClient.TibcoEmsClient
         {
             Logger.LogInformation($"{nameof(TopicReceiverHostedService)} is stopping");
 
-            CloseAll();
+            CloseAllConnections();
 
             Logger.LogInformation($"{nameof(TopicReceiverHostedService)} has stopped");
 
@@ -59,9 +59,9 @@ namespace ObjectSharp.Demos.JMSClient.TibcoEmsClient
 
         #region Implementation
 
-        protected abstract Task Execute(string topicName);
+        protected abstract void Execute(string topicName);
 
-        protected virtual void CloseAll()
+        protected virtual void CloseAllConnections()
         {
             Session?.Close();
             Connection?.Close();

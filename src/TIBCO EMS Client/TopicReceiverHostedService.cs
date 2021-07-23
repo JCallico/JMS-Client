@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Threading;
-using System.Threading.Tasks;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -10,16 +9,16 @@ namespace ObjectSharp.Demos.JMSClient.TibcoEmsClient
 {
     public class TopicReceiverHostedService : TopicHostedService
     {
+        protected TopicSubscriber _subscriber;
+
         public TopicReceiverHostedService(
             ILogger<TopicReceiverHostedService> logger,
             IHostApplicationLifetime appLifetime,
             IOptions<TopicSettings> settings) : base(logger, appLifetime, settings)
         {
         }
-
-        protected TopicSubscriber Subscriber { get; set; }
-
-        protected override Task Execute(string topicName)
+        
+        protected override void Execute(string topicName)
         {
             // first loop: assures that when a fatal error occurs the
             // connection is reestablished and the receiving process
@@ -40,7 +39,7 @@ namespace ObjectSharp.Demos.JMSClient.TibcoEmsClient
 
                     Topic clientTopic = Session.CreateTopic(topicName);
 
-                    Subscriber = Session.CreateDurableSubscriber(clientTopic, Settings.Value.SubscriberName, string.Empty, true);
+                    _subscriber = Session.CreateDurableSubscriber(clientTopic, Settings.Value.SubscriberName, string.Empty, true);
 
                     // second loop: continues to check for messages
                     // if none are available, sleeps for a while
@@ -56,7 +55,7 @@ namespace ObjectSharp.Demos.JMSClient.TibcoEmsClient
 
                             try
                             {
-                                message = Subscriber.ReceiveNoWait();
+                                message = _subscriber.ReceiveNoWait();
 
                                 if (message == null)
                                 {
@@ -113,7 +112,7 @@ namespace ObjectSharp.Demos.JMSClient.TibcoEmsClient
 
                     Logger.LogError(e, $"An error just happened: {e.Message}");
 
-                    CloseAll();
+                    CloseAllConnections();
 
                     Logger.LogInformation("Receiving will be resumed...");
 
@@ -122,11 +121,11 @@ namespace ObjectSharp.Demos.JMSClient.TibcoEmsClient
             }
         }
 
-        protected override void CloseAll()
+        protected override void CloseAllConnections()
         {
-            Subscriber?.Close();
+            _subscriber?.Close();
 
-            base.CloseAll();
+            base.CloseAllConnections();
         }
     }
 }

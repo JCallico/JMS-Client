@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Threading;
-using System.Threading.Tasks;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -12,6 +11,10 @@ namespace ObjectSharp.Demos.JMSClient.TibcoEmsClient
     {
         private readonly TopicSenderOptions _senderOptions;
 
+        private static readonly SemaphoreSlim _publisherLock = new SemaphoreSlim(1);
+
+        private TopicPublisher _publisher;
+
         public TopicSenderHostedService(
             ILogger<TopicReceiverHostedService> logger,
             IHostApplicationLifetime appLifetime,
@@ -21,9 +24,7 @@ namespace ObjectSharp.Demos.JMSClient.TibcoEmsClient
             _senderOptions = senderOptions;
         }
 
-        protected TopicPublisher Publisher { get; set; }
-
-        protected override Task Execute(string topicName)
+        protected override void Execute(string topicName)
         {
             int numberOfMessagesSent = 0;
 
@@ -39,7 +40,7 @@ namespace ObjectSharp.Demos.JMSClient.TibcoEmsClient
 
                     Topic generalTopic = Session.CreateTopic(topicName);
 
-                    Publisher = Session.CreatePublisher(generalTopic);
+                    _publisher = Session.CreatePublisher(generalTopic);
 
                     Connection.Start();
 
@@ -49,7 +50,21 @@ namespace ObjectSharp.Demos.JMSClient.TibcoEmsClient
                     {
                         TextMessage message = Session.CreateTextMessage(_senderOptions.MessageText);
 
-                        Publisher.Publish(message);
+                        try
+                        {
+                            _publisherLock.Wait();
+
+                            if (_publisher == null)
+                            {
+                                break;
+                            }
+
+                            _publisher.Publish(message);
+                        }
+                        finally
+                        {
+                            _publisherLock.Release();
+                        }
 
                         numberOfMessagesSent++;
 
@@ -66,26 +81,37 @@ namespace ObjectSharp.Demos.JMSClient.TibcoEmsClient
                 }
                 catch (Exception e)
                 {
+
+
                     while (e.InnerException != null) e = e.InnerException;
 
                     Logger.LogError(e, $"An error just happened: {e.Message}");
 
-                    CloseAll();
+                    CloseAllConnections();
 
                     Logger.LogInformation("Sending will be resumed...");
 
                     Thread.Sleep(Settings.Value.ErrorAttemptInterval);
                 }
             }
-
-            return Task.CompletedTask;
         }
 
-        protected override void CloseAll()
+        protected override void CloseAllConnections()
         {
-            Publisher?.Close();
+            try
+            {
+                _publisherLock.Wait();
 
-            base.CloseAll();
+                _publisher?.Close();
+
+                _publisher = null;
+            }
+            finally
+            {
+                _publisherLock.Release();
+            }
+
+            base.CloseAllConnections();
         }
     }
 }
