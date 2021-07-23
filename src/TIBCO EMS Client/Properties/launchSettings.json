@@ -2,7 +2,8 @@
   "profiles": {
     "TIBCO EMS Client": {
       "commandName": "Project",
-      "commandLineArgs": "-c \"Receive\""
+      "commandLineArgs": "-c \"Send\" -m \"Test Message\"",
+      "sqlDebugging": true
     }
   }
 }
