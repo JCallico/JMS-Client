@@ -23,13 +23,13 @@ A simple client console app for TIBCO EMS.
 #### Sending a message
 
 ```
-TibcoEmsClient.exe -c "Send" -m "This is a sample message"
+TibcoEmsClient.exe --command "Send" --message "This is a sample message"
 ```
 
 #### Receiving messages
 
 ```
-TibcoEmsClient.exe -c "Receive"
+TibcoEmsClient.exe --command "Receive"
 ```
 
 ## WebLogic JMS Client

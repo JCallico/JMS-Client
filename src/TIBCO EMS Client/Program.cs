@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Threading.Tasks;
-using CommandLine;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -9,59 +8,52 @@ namespace ObjectSharp.Demos.JMSClient.TibcoEmsClient
 {
     class Program
     {
-        static Task Main(string[] args)
+        /// <summary>
+        /// A simple JMS client.
+        /// </summary>
+        /// <param name="command">Command to run. Expected: Send, Receive</param>
+        /// <param name="message"></param>
+        /// <param name="numberOfMessages"></param>
+        /// <param name="delayBetweenMessages"></param>
+        static Task Main(ProgramCommands command = ProgramCommands.Receive, string message = null, int numberOfMessages = 1, int delayBetweenMessages = 0)
         {
-            IHost host = null;
-
-            Parser.Default.ParseArguments<ProgramOptions>(args)
-                .WithParsed(options =>
+            var host = Host.CreateDefaultBuilder()
+                .ConfigureServices((context, services) =>
                 {
-                    host = Host.CreateDefaultBuilder(args)
-                        .ConfigureServices((context, services) =>
-                        {
-                            switch (options.Command)
+                    switch (command)
+                    {
+                        case ProgramCommands.Send:
+
+                            services.AddHostedService<TopicSenderHostedService>();
+                            services.AddSingleton(new TopicSenderOptions
                             {
-                                case ProgramOptionsCommand.Send:
+                                MessageText = message,
+                                NumberOfMessages = numberOfMessages,
+                                DelayBetweenMessages = delayBetweenMessages
+                            });
 
-                                    services.AddHostedService<TopicSenderHostedService>();
-                                    services.AddSingleton(new TopicSenderOptions
-                                    {
-                                        MessageText = options.Message,
-                                        NumberOfMessages = options.NumberOfMessages,
-                                        DelayBetweenMessages = options.DelayBetweenMessages
-                                    });
+                            break;
 
-                                    break;
+                        case ProgramCommands.Receive:
 
-                                case ProgramOptionsCommand.Receive:
+                            services.AddHostedService<TopicReceiverHostedService>();
 
-                                    services.AddHostedService<TopicReceiverHostedService>();
+                            break;
+                    }
 
-                                    break;
-                            }
-
-                            services.AddOptions<TopicSettings>().Bind(context.Configuration.GetSection("topicSettings"));
-                        })
-                        .Build();
-
-                    var logger = host.Services.GetRequiredService<ILogger<Program>>();
-
-                    logger.LogInformation($"{AppDomain.CurrentDomain.FriendlyName} is starting");
-
-                    var appLifetime = host.Services.GetRequiredService<IHostApplicationLifetime>();
-                    appLifetime.ApplicationStarted.Register(() => OnStarted(logger));
-                    appLifetime.ApplicationStopped.Register(() => OnStopped(logger));
+                    services.AddOptions<TopicSettings>().Bind(context.Configuration.GetSection("topicSettings"));
                 })
-                .WithNotParsed(errors =>
-                {
-                    string name = AppDomain.CurrentDomain.FriendlyName;
+                .Build();
 
-                    Console.WriteLine("Usage:");
-                    Console.WriteLine($"{name} -c \"Send\" -m \"Message text\" -n 10 -d 100");
-                    Console.WriteLine($"{name} -c \"Receive\" ");
-                });
+            var logger = host.Services.GetRequiredService<ILogger<Program>>();
 
-            return host?.RunAsync() ?? Task.CompletedTask;
+            logger.LogInformation($"{AppDomain.CurrentDomain.FriendlyName} is starting");
+
+            var appLifetime = host.Services.GetRequiredService<IHostApplicationLifetime>();
+            appLifetime.ApplicationStarted.Register(() => OnStarted(logger));
+            appLifetime.ApplicationStopped.Register(() => OnStopped(logger));
+
+            return host.RunAsync();
         }
 
         protected static void OnStarted(ILogger logger)
