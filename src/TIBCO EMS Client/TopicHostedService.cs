@@ -37,7 +37,7 @@ namespace ObjectSharp.Demos.JMSClient.TibcoEmsClient
         {
             Logger.LogInformation($"{nameof(TopicReceiverHostedService)} is starting");
 
-            Task.Run(() => Execute(Settings.Value.TopicName), cancellationToken);
+            Task.Run(() => Execute(), cancellationToken);
 
             Logger.LogInformation($"{nameof(TopicReceiverHostedService)} has started");
 
@@ -48,7 +48,7 @@ namespace ObjectSharp.Demos.JMSClient.TibcoEmsClient
         {
             Logger.LogInformation($"{nameof(TopicReceiverHostedService)} is stopping");
 
-            CloseAllConnections();
+            Disconnect();
 
             Logger.LogInformation($"{nameof(TopicReceiverHostedService)} has stopped");
 
@@ -59,14 +59,29 @@ namespace ObjectSharp.Demos.JMSClient.TibcoEmsClient
 
         #region Implementation
 
-        protected abstract void Execute(string topicName);
+        protected abstract void Execute();
 
-        protected virtual void CloseAllConnections()
+        protected virtual void Connect(bool useClientId = true)
+        {
+            TopicConnectionFactory factory = useClientId
+                ? new TopicConnectionFactory(Settings.Value.ProviderUrl, Settings.Value.ClientId)
+                : new TopicConnectionFactory(Settings.Value.ProviderUrl);
+
+            Connection = factory.CreateTopicConnection(Settings.Value.Username, Settings.Value.Password);
+
+            Session = Connection.CreateTopicSession(false, TIBCO.EMS.Session.CLIENT_ACKNOWLEDGE);
+
+            Connection.Start();
+
+            Logger.LogDebug("Connected...");
+        }
+
+        protected virtual void Disconnect()
         {
             Session?.Close();
             Connection?.Close();
 
-            Logger.LogDebug("All connections have been closed");
+            Logger.LogDebug("Disconnected...");
         }
 
         protected void LogMessage(string header, Message message)

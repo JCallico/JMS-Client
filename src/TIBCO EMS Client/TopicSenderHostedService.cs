@@ -24,7 +24,7 @@ namespace ObjectSharp.Demos.JMSClient.TibcoEmsClient
             _senderOptions = senderOptions;
         }
 
-        protected override void Execute(string topicName)
+        protected override void Execute()
         {
             int numberOfMessagesSent = 0;
 
@@ -32,19 +32,9 @@ namespace ObjectSharp.Demos.JMSClient.TibcoEmsClient
             {
                 try
                 {
-                    TopicConnectionFactory factory = new TopicConnectionFactory(Settings.Value.ProviderUrl);
+                    Connect();
 
-                    Connection = factory.CreateTopicConnection(Settings.Value.Username, Settings.Value.Password);
-
-                    Session = Connection.CreateTopicSession(false, TIBCO.EMS.Session.CLIENT_ACKNOWLEDGE);
-
-                    Topic generalTopic = Session.CreateTopic(topicName);
-
-                    _publisher = Session.CreatePublisher(generalTopic);
-
-                    Connection.Start();
-
-                    Logger.LogDebug("Connected and attempting to send message...");
+                    Logger.LogDebug("Attempting to send message...");
 
                     while (numberOfMessagesSent < _senderOptions.NumberOfMessages)
                     {
@@ -87,7 +77,7 @@ namespace ObjectSharp.Demos.JMSClient.TibcoEmsClient
 
                     Logger.LogError(e, $"An error just happened: {e.Message}");
 
-                    CloseAllConnections();
+                    Disconnect();
 
                     Logger.LogInformation("Sending will be resumed...");
 
@@ -96,7 +86,18 @@ namespace ObjectSharp.Demos.JMSClient.TibcoEmsClient
             }
         }
 
-        protected override void CloseAllConnections()
+        protected override void Connect(bool useClientId = true)
+        {
+            base.Connect(false);
+
+            Topic generalTopic = Session.CreateTopic(Settings.Value.TopicName);
+
+            _publisher = Session.CreatePublisher(generalTopic);
+
+            Logger.LogDebug("Publisher created...");
+        }
+
+        protected override void Disconnect()
         {
             try
             {
@@ -111,7 +112,7 @@ namespace ObjectSharp.Demos.JMSClient.TibcoEmsClient
                 _publisherLock.Release();
             }
 
-            base.CloseAllConnections();
+            base.Disconnect();
         }
     }
 }

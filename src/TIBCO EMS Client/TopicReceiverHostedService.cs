@@ -18,7 +18,7 @@ namespace ObjectSharp.Demos.JMSClient.TibcoEmsClient
         {
         }
         
-        protected override void Execute(string topicName)
+        protected override void Execute()
         {
             // first loop: assures that when a fatal error occurs the
             // connection is reestablished and the receiving process
@@ -27,19 +27,7 @@ namespace ObjectSharp.Demos.JMSClient.TibcoEmsClient
             {
                 try
                 {
-                    TopicConnectionFactory factory = new TopicConnectionFactory(Settings.Value.ProviderUrl, Settings.Value.ClientId);
-
-                    Connection = factory.CreateTopicConnection(Settings.Value.Username, Settings.Value.Password);
-
-                    Connection.Start();
-
-                    Logger.LogDebug("Connected...");
-
-                    Session = Connection.CreateTopicSession(false, TIBCO.EMS.Session.CLIENT_ACKNOWLEDGE);
-
-                    Topic clientTopic = Session.CreateTopic(topicName);
-
-                    _subscriber = Session.CreateDurableSubscriber(clientTopic, Settings.Value.SubscriberName, string.Empty, true);
+                    Connect();
 
                     // second loop: continues to check for messages
                     // if none are available, sleeps for a while
@@ -62,7 +50,7 @@ namespace ObjectSharp.Demos.JMSClient.TibcoEmsClient
                                     break;
                                 }
 
-                                LogMessage($"Message received: ", message);
+                                LogMessage("Message received: ", message);
 
                                 // todo: add handling logic here !!!!
 
@@ -112,7 +100,7 @@ namespace ObjectSharp.Demos.JMSClient.TibcoEmsClient
 
                     Logger.LogError(e, $"An error just happened: {e.Message}");
 
-                    CloseAllConnections();
+                    Disconnect();
 
                     Logger.LogInformation("Receiving will be resumed...");
 
@@ -121,11 +109,23 @@ namespace ObjectSharp.Demos.JMSClient.TibcoEmsClient
             }
         }
 
-        protected override void CloseAllConnections()
+        protected override void Connect(bool useClientId = true)
+        {
+            base.Connect(true);
+
+            Topic clientTopic = Session.CreateTopic(Settings.Value.TopicName);
+
+            _subscriber = Session.CreateDurableSubscriber(clientTopic, Settings.Value.SubscriberName, string.Empty, true);
+
+            Logger.LogDebug("Subscriber created...");
+
+        }
+
+        protected override void Disconnect()
         {
             _subscriber?.Close();
 
-            base.CloseAllConnections();
+            base.Disconnect();
         }
     }
 }
