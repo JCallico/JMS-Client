@@ -1,4 +1,4 @@
-﻿namespace ObjectSharp.Demos.JMSClient.TibcoEmsClient
+﻿namespace Callicode.JMSClient.TibcoEmsClient
 {
     public class TopicSenderOptions
     {

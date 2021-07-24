@@ -4,7 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
-namespace ObjectSharp.Demos.JMSClient.TibcoEmsClient
+namespace Callicode.JMSClient.TibcoEmsClient
 {
     class Program
     {

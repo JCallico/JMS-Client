@@ -7,7 +7,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using TIBCO.EMS;
 
-namespace ObjectSharp.Demos.JMSClient.TibcoEmsClient
+namespace Callicode.JMSClient.TibcoEmsClient
 {
     public abstract class TopicHostedService : IHostedService
     {

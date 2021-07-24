@@ -5,10 +5,12 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using TIBCO.EMS;
 
-namespace ObjectSharp.Demos.JMSClient.TibcoEmsClient
+namespace Callicode.JMSClient.TibcoEmsClient
 {
     public class TopicReceiverHostedService : TopicHostedService
     {
+        private static readonly SemaphoreSlim _subscriberLock = new SemaphoreSlim(1);
+
         protected TopicSubscriber _subscriber;
 
         public TopicReceiverHostedService(
@@ -43,7 +45,21 @@ namespace ObjectSharp.Demos.JMSClient.TibcoEmsClient
 
                             try
                             {
-                                message = _subscriber.ReceiveNoWait();
+                                try
+                                {
+                                    _subscriberLock.Wait();
+
+                                    if (_subscriber == null)
+                                    {
+                                        break;
+                                    }
+
+                                    message = _subscriber.ReceiveNoWait();
+                                }
+                                finally
+                                {
+                                    _subscriberLock.Release();
+                                }
 
                                 if (message == null)
                                 {
@@ -123,7 +139,18 @@ namespace ObjectSharp.Demos.JMSClient.TibcoEmsClient
 
         protected override void Disconnect()
         {
-            _subscriber?.Close();
+            try
+            {
+                _subscriberLock.Wait();
+
+                _subscriber?.Close();
+
+                _subscriber = null;
+            }
+            finally
+            {
+                _subscriberLock.Release();
+            }
 
             base.Disconnect();
         }

@@ -7,7 +7,7 @@ using System.Reflection;
 using System.Threading;
 using WebLogic.Messaging;
 
-namespace ObjectSharp.Demos.JMSClient.WebLogicJMSClient
+namespace Callicode.JMSClient.WebLogicJMSClient
 {
     class Program
     {

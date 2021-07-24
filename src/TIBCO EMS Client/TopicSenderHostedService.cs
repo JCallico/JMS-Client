@@ -5,13 +5,13 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using TIBCO.EMS;
 
-namespace ObjectSharp.Demos.JMSClient.TibcoEmsClient
+namespace Callicode.JMSClient.TibcoEmsClient
 {
     public class TopicSenderHostedService : TopicHostedService
     {
-        private readonly TopicSenderOptions _senderOptions;
-
         private static readonly SemaphoreSlim _publisherLock = new SemaphoreSlim(1);
+
+        private readonly TopicSenderOptions _senderOptions;
 
         private TopicPublisher _publisher;
 
@@ -38,7 +38,7 @@ namespace ObjectSharp.Demos.JMSClient.TibcoEmsClient
 
                     while (numberOfMessagesSent < _senderOptions.NumberOfMessages)
                     {
-                        TextMessage message = Session.CreateTextMessage(_senderOptions.MessageText);
+                        TextMessage message;
 
                         try
                         {
@@ -49,6 +49,7 @@ namespace ObjectSharp.Demos.JMSClient.TibcoEmsClient
                                 break;
                             }
 
+                            message = Session.CreateTextMessage(_senderOptions.MessageText);
                             _publisher.Publish(message);
                         }
                         finally
