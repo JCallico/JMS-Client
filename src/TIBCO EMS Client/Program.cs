@@ -9,12 +9,12 @@ namespace Callicode.JMSClient.TibcoEmsClient
     class Program
     {
         /// <summary>
-        /// A simple JMS client.
+        /// A simple client for TIBCO EMS topics.
         /// </summary>
         /// <param name="command">Command to run. Expected: Send, Receive</param>
-        /// <param name="message"></param>
-        /// <param name="numberOfMessages"></param>
-        /// <param name="delayBetweenMessages"></param>
+        /// <param name="message">The text message to send</param>
+        /// <param name="numberOfMessages">The number of messages to send</param>
+        /// <param name="delayBetweenMessages">The delay between every message to be sent</param>
         static Task Main(ProgramCommands command = ProgramCommands.Receive, string message = null, int numberOfMessages = 1, int delayBetweenMessages = 0)
         {
             var host = Host.CreateDefaultBuilder()
