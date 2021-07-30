@@ -7,6 +7,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TIBCO EMS Client", "TIBCO E
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebLogic JMS Client", "WebLogic JMS Client\WebLogic JMS Client.csproj", "{72DE2C4B-4EFF-4767-A556-08AA229343FC}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Common", "Common\Common.csproj", "{C3991670-0015-4657-824D-121482678211}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{72DE2C4B-4EFF-4767-A556-08AA229343FC}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{72DE2C4B-4EFF-4767-A556-08AA229343FC}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{72DE2C4B-4EFF-4767-A556-08AA229343FC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C3991670-0015-4657-824D-121482678211}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C3991670-0015-4657-824D-121482678211}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C3991670-0015-4657-824D-121482678211}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C3991670-0015-4657-824D-121482678211}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
